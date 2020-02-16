@@ -10,6 +10,10 @@ import (
 
 func (s *Strava) GetMyFollowers(c *parser.Client){
 	var headers = map[string]string{}
+
+	s.Followers = make([]string, 0)
+	s.FollowersInfo = make(map[string]string)
+
 	headers["authorization"] = "access_token " + s.authToken
 
 	var myFolowersUrl = strings.ReplaceAll(s.MapUrls["followers_url"], "{ATHLETE-ID}", s.athleteId)
