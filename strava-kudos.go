@@ -1,5 +1,8 @@
-// build for amd64
+// build for linux-amd64
 // GOOS=linux GOARCH=amd64 go build strava-kudos.go
+
+// build for mac-amd64
+// GOOS=darwin GOARCH=amd64 go build strava-kudos.go
 
 package main
 
