@@ -39,7 +39,12 @@ func (c *Client) InitWebClient() {
 	}
 }
 
-func (c *Client) MakeRequest(siteUrl string, method string, body string, headers map[string]string) (string, int) {
+func (c *Client) MakeRequest(
+	siteUrl string,
+	method string,
+	body string,
+	headers map[string]string,
+) (string, int) {
 
 	var err error
 	c.url, err = url.Parse(siteUrl)
