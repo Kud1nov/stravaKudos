@@ -1,0 +1,5 @@
+[
+  {"id":1001,"firstname":"Alice","lastname":"A","resource_state":2},
+  {"id":1002,"firstname":"Bob","lastname":"B","resource_state":2},
+  {"id":1003,"firstname":"Charlie","lastname":"C","resource_state":2}
+]

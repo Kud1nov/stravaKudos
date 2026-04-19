@@ -1,0 +1,22 @@
+[
+  {
+    "entity_id": 500001,
+    "item": { "has_kudoed": true, "type": "Activity" }
+  },
+  {
+    "entity_id": 500002,
+    "item": { "has_kudoed": false, "type": "Activity" }
+  },
+  {
+    "entity_id": 500003,
+    "item": { "has_kudoed": false, "type": "Activity" }
+  },
+  {
+    "entity_id": 0,
+    "item": { "type": "PromoCard" }
+  },
+  {
+    "entity_id": 500004,
+    "item": { "type": "SegmentLeaderboard" }
+  }
+]
