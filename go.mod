@@ -5,6 +5,7 @@ go 1.25.0
 require github.com/joho/godotenv v1.5.1
 
 require (
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
