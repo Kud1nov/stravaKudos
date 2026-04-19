@@ -69,11 +69,15 @@ tidy:
 deploy-package: build-linux
 	@mkdir -p dist
 	@[ -f $(LINUX_BINARY) ] || { echo "linux binary not built — did cmd/ exist?" >&2; exit 1; }
-	tar -czf $(DEPLOY_TAR) -C . \
-	  --transform 's,^$(LINUX_BINARY),$(BINARY),' \
-	  --transform 's,^deploy/,,' \
-	  $(LINUX_BINARY) deploy/
+	@rm -rf dist/pkg && mkdir -p dist/pkg
+	cp $(LINUX_BINARY) dist/pkg/$(BINARY)
+	cp deploy/stravakudos.service deploy/stravakudos.env.example \
+	   deploy/migrate.sh deploy/rollback.sh deploy/README.md dist/pkg/
+	chmod +x dist/pkg/$(BINARY) dist/pkg/migrate.sh dist/pkg/rollback.sh
+	tar -czf $(DEPLOY_TAR) -C dist/pkg .
+	@rm -rf dist/pkg
 	@echo "deploy package: $(DEPLOY_TAR)"
+	@tar -tzf $(DEPLOY_TAR)
 
 ## clean: remove build output
 clean:
