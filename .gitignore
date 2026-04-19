@@ -1,0 +1,13 @@
+# build artifacts
+/bin/
+/dist/
+
+# local SQLite state
+*.db
+*.db-wal
+*.db-shm
+
+# secrets (the existing tracked .env / .strava-auth-token are legacy;
+#   new deploys must use /etc/stravakudos/stravakudos.env on the server)
+.env
+.strava-auth-token
