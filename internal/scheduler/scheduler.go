@@ -339,3 +339,115 @@ const (
 	statusNotFound     = "not_found"
 	statusTransient    = "transient"
 )
+
+// ---- Rosters refresher (Task 9) ----
+
+// refreshRosters fetches /athlete, /followers, /friends and upserts rows
+// into the athletes table with the right relation. Routes through
+// rl.Wait between requests so a concurrent 429 pause blocks us too —
+// conservative, not strictly necessary (those endpoints live in a
+// separate bucket per our investigation on rw), but removes any
+// cold-start burst concern.
+func (s *Scheduler) refreshRosters(ctx context.Context) error {
+	if err := s.rl.Wait(ctx); err != nil {
+		return err
+	}
+	token, err := s.auth.Ensure(ctx)
+	if err != nil {
+		return fmt.Errorf("auth.Ensure: %w", err)
+	}
+
+	athleteID, err := s.strava.GetProfile(ctx, token)
+	s.recordAPICall(ctx, "profile", err)
+	if err != nil {
+		return fmt.Errorf("GetProfile: %w", err)
+	}
+
+	if err := s.rl.Wait(ctx); err != nil {
+		return err
+	}
+	followers, err := s.strava.GetFollowers(ctx, token, athleteID)
+	s.recordAPICall(ctx, "followers", err)
+	if err != nil {
+		s.log.Warn("GetFollowers failed", "err", err)
+		// Don't abort roster refresh — try friends too
+	} else {
+		for _, a := range followers {
+			if err := s.store.UpsertAthlete(ctx, a.ID, a.DisplayName(), store.RelationFollower); err != nil {
+				s.log.Warn("UpsertAthlete follower", "id", a.ID, "err", err)
+			}
+		}
+	}
+
+	if err := s.rl.Wait(ctx); err != nil {
+		return err
+	}
+	friends, err := s.strava.GetFriends(ctx, token, athleteID)
+	s.recordAPICall(ctx, "friends", err)
+	if err != nil {
+		s.log.Warn("GetFriends failed", "err", err)
+	} else {
+		for _, a := range friends {
+			if err := s.store.UpsertAthlete(ctx, a.ID, a.DisplayName(), store.RelationFollowing); err != nil {
+				s.log.Warn("UpsertAthlete friend", "id", a.ID, "err", err)
+			}
+		}
+	}
+
+	s.log.Info("roster refresh ok",
+		"followers", len(followers), "friends", len(friends))
+	return nil
+}
+
+// ---- Run loop (tickers) ----
+
+// Run is the entry point. Spins up three tickers (feed, rosters, GC) and
+// returns on ctx.Done(). Errors in individual ticks are logged, not fatal.
+func (s *Scheduler) Run(ctx context.Context) error {
+	// First roster refresh right away so cold-start has data.
+	if err := s.refreshRosters(ctx); err != nil {
+		s.log.Warn("initial roster refresh failed", "err", err)
+		// Continue — next ticker cycle will retry
+	}
+	// First GC immediately too (cheap and keeps api_calls small on restart).
+	if deleted, err := s.store.GCOlderThan(ctx, 7*24*time.Hour); err != nil {
+		s.log.Warn("initial GC failed", "err", err)
+	} else if deleted > 0 {
+		s.log.Info("gc api_calls", "deleted", deleted)
+	}
+
+	feedTicker := time.NewTicker(s.cfg.ScanInterval)
+	defer feedTicker.Stop()
+	rosterTicker := time.NewTicker(s.cfg.RosterRefreshInterval)
+	defer rosterTicker.Stop()
+	gcTicker := time.NewTicker(7 * 24 * time.Hour)
+	defer gcTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+
+		case <-feedTicker.C:
+			if err := s.tick(ctx); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
+				s.log.Warn("tick error", "err", err)
+			}
+			s.watchdog()
+
+		case <-rosterTicker.C:
+			if err := s.refreshRosters(ctx); err != nil {
+				s.log.Warn("roster refresh error", "err", err)
+			}
+
+		case <-gcTicker.C:
+			if deleted, err := s.store.GCOlderThan(ctx, 7*24*time.Hour); err != nil {
+				s.log.Warn("gc error", "err", err)
+			} else if deleted > 0 {
+				s.log.Info("gc api_calls", "deleted", deleted)
+			}
+		}
+	}
+}
