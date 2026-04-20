@@ -7,7 +7,16 @@
 *.db-wal
 *.db-shm
 
-# secrets (the existing tracked .env / .strava-auth-token are legacy;
-#   new deploys must use /etc/stravakudos/stravakudos.env on the server)
+# secrets — NEVER commit these
 .env
 .strava-auth-token
+*.cookies
+/cookies*.txt
+
+# internal / non-public materials
+# This repo is public — keep operational docs, deploy scripts, plans,
+# and reverse-engineered API notes off the public tree. Originals live
+# locally at ~/.local-docs/stravaKudos/.
+/docs/
+/deploy/
+/plans/
